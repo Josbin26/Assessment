@@ -3,3 +3,59 @@
 @media(max-width:1050px){.sidebar{width:195px}main{margin-left:195px}.content{padding:28px 23px}.topbar{padding:0 23px}.stats{gap:9px}.stat{padding:14px}th,td{padding-left:9px;padding-right:9px}th:first-child,td:first-child{padding-left:16px}}
 @media(max-width:760px){.sidebar{position:static;width:auto;height:57px;padding:10px 17px;flex-direction:row;align-items:center}.brand{padding:0;font-size:20px}.brand>div{height:32px;width:32px}.side-label,.nav,.side-user{display:none}main{margin:0}.topbar{height:50px;padding:0 17px}.content{padding:25px 15px}.page-title h1{font-size:23px}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.toolbar{padding:0 15px 14px}.panel-title{padding:18px 15px 14px}.panel-foot{padding:12px 15px}.alert{margin-left:15px;margin-right:15px}.page-foot{flex-direction:column}}
 @media(max-width:500px){.page-title{gap:9px;align-items:flex-start}.page-title h1{font-size:20px}.page-title p{font-size:11px}.add{width:40px;height:40px;padding:0;font-size:0;gap:0;flex:none}.add svg{width:19px;height:19px}.stat{padding:12px;min-height:125px}.stat strong{font-size:23px}.panel-title h2{font-size:14px}.toolbar{flex-direction:column}.search{width:100%;max-width:none}.filter{height:37px;justify-content:space-between}.filter select{flex:1}.form-grid{grid-template-columns:1fr;gap:13px}.form-grid .field:last-child{grid-column:auto}.form{padding:17px 16px 0}.modal-head{padding:17px 16px}.form-foot{margin-left:-16px;margin-right:-16px;padding:13px 16px;gap:8px}.form-foot .btn{font-size:10px;padding:9px}.details{padding:17px 16px 0}.detail-name h3{font-size:15px}.detail-hero{gap:8px;flex-wrap:wrap}.detail-hero>.badge{margin-left:55px}.detail-grid{gap:7px}.detail-grid>div{padding:9px}.detail-foot{margin-left:-16px;margin-right:-16px;padding:13px 16px;align-items:flex-start;flex-direction:column}.detail-foot>div{width:100%;justify-content:flex-end;flex-wrap:wrap}.detail-foot select{flex:1;max-width:none}.veil{padding:9px}.modal{max-height:calc(100vh - 18px)}.page-foot{font-size:8px}}
+
+/* JobTrack lavender abstract background enhancement */
+main {
+  position: relative;
+  isolation: isolate;
+  background-color: #f5f7fc;
+  background-image:
+    radial-gradient(ellipse at 76% 2%, rgba(198, 187, 255, 0.42) 0, rgba(198, 187, 255, 0.18) 17%, transparent 34%),
+    radial-gradient(ellipse at 34% 15%, rgba(222, 218, 255, 0.75) 0, rgba(222, 218, 255, 0.3) 18%, transparent 38%),
+    radial-gradient(ellipse at 98% 38%, rgba(182, 173, 255, 0.25) 0, transparent 28%),
+    linear-gradient(145deg, #f7f8ff 0%, #f2f5fc 52%, #f8f7ff 100%);
+}
+
+/* Decorative circles and soft curved glow, kept behind the UI */
+main::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 540px;
+  opacity: 0.9;
+  background-image:
+    radial-gradient(circle at 32% -2%, rgba(188, 179, 255, 0.30) 0 78px, transparent 80px),
+    radial-gradient(circle at 72% 38%, rgba(174, 165, 255, 0.24) 0 128px, transparent 130px),
+    radial-gradient(circle at 16% 100%, rgba(205, 199, 255, 0.24) 0 180px, transparent 182px),
+    radial-gradient(circle, rgba(130, 112, 246, 0.40) 1.5px, transparent 2px);
+  background-size: auto, auto, auto, 17px 17px;
+  background-position: center, center, center, right 19% top 85px;
+  background-repeat: no-repeat, no-repeat, no-repeat, repeat;
+  mask-image: linear-gradient(to bottom, #000 0%, rgba(0,0,0,.7) 48%, transparent 100%);
+}
+
+.topbar {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(14px);
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+}
+
+.stat,
+.panel {
+  box-shadow: 0 8px 28px rgba(63, 56, 130, 0.035);
+}
+
+@media (max-width: 760px) {
+  main::before {
+    height: 430px;
+    background-position: center, center, center, right 10% top 70px;
+  }
+}
