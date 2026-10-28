@@ -1,24 +1,96 @@
-import {useCallback,useEffect,useState} from 'react';
-import {BriefcaseBusiness,Plus,Search,CalendarDays,Clock3,Pencil,Trash2,X,ArrowUpRight,RefreshCw,FileText,Building2,CircleDollarSign,CheckCircle2,AlertCircle,LayoutDashboard} from 'lucide-react';
-import{getApplications,getStats,getApplication,createApplication,updateApplication,changeStatus,deleteApplication}from './api.js';
-const STATUSES=['Applied','Interview','Offer','Rejected','Accepted','Declined'], TYPES=['Full-time','Internship','Contract'];
-const NEXT={Applied:['Interview','Rejected'],Interview:['Offer','Rejected'],Offer:['Accepted','Declined'],Rejected:[],Accepted:[],Declined:[]};
-const EMPTY=()=>({companyName:'',jobRole:'',jobType:'Full-time',appliedDate:new Date().toLocaleDateString('en-CA'),expectedSalary:'',notes:''});
-const fmt=d=>d?new Date(d).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'}):'—';
-const dt=d=>d?new Date(d).toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
-const money=n=>n==null||n===''?'Not specified':new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(n);
-function Badge({status}){return <span className={'badge b-'+status.toLowerCase()}><i/>{status}</span>}
-function Field({label,children}){return <label className="field"><span>{label}</span>{children}</label>}
-function Modal({title,onClose,children,wide=false}){return <div className="veil" onMouseDown={e=>e.target===e.currentTarget&&onClose()}><section className={'modal '+(wide?'wide':'')}><header className="modal-head"><div><small>JOBTRACK WORKSPACE</small><h2>{title}</h2></div><button className="icon-btn" onClick={onClose}><X size={19}/></button></header>{children}</section></div>}
-function Form({initial,onClose,onSave,busy,error}){const [f,setF]=useState(initial||EMPTY()),[local,setLocal]=useState('');const change=e=>setF({...f,[e.target.name]:e.target.value});async function submit(e){e.preventDefault();setLocal('');if(!f.companyName.trim()||!f.jobRole.trim()||!f.appliedDate)return setLocal('Complete all required fields.');if(new Date(f.appliedDate+'T00:00:00')>new Date(new Date().setHours(0,0,0,0)))return setLocal('Applied date cannot be in the future.');if(f.expectedSalary!==''&&Number(f.expectedSalary)<0)return setLocal('Salary cannot be negative.');const payload={...f,companyName:f.companyName.trim(),jobRole:f.jobRole.trim(),expectedSalary:f.expectedSalary===''?null:Number(f.expectedSalary)};if(initial)delete payload.appliedDate;await onSave(payload)}
-return <form className="form" onSubmit={submit}>{(local||error)&&<div className="alert"><AlertCircle size={16}/>{local||error}</div>}<div className="form-grid"><Field label="Company name \*"><input autoFocus name="companyName" value={f.companyName} onChange={change} placeholder="e.g. Infosys" required/></Field><Field label="Job role \*"><input name="jobRole" value={f.jobRole} onChange={change} placeholder="e.g. Frontend Developer" required/></Field><Field label="Job type \*"><select name="jobType" value={f.jobType} onChange={change}>{TYPES.map(x=><option key={x}>{x}</option>)}</select></Field><Field label={initial?'Applied date (locked)':'Applied date \*'}>{initial?<input disabled value={fmt(initial.appliedDate)}/>:<input type="date" name="appliedDate" value={f.appliedDate} max={new Date().toLocaleDateString('en-CA')} onChange={change} required/>}</Field><Field label="Expected salary (₹)"><input type="number" min="0" name="expectedSalary" value={f.expectedSalary??''} onChange={change} placeholder="Optional"/></Field><Field label="Notes (optional)"><textarea name="notes" rows="3" value={f.notes||''} onChange={change} placeholder="Interview details, contact info…"/></Field></div><footer className="form-foot"><span>\* Required fields</span><div><button type="button" className="btn ghost" onClick={onClose}>Cancel</button><button className="btn primary" disabled={busy}>{busy?'Saving…':<><CheckCircle2 size={16}/>{initial?'Save changes':'Add application'}</>}</button></div></footer></form>}
-function Details({app,onClose,onEdit,onStatus,onDelete,busy}){const [item,setItem]=useState(app),[refreshing,setRefreshing]=useState(false);useEffect(()=>setItem(app),[app]);async function refresh(){setRefreshing(true);try{setItem(await getApplication(app._id))}finally{setRefreshing(false)}}return <Modal title="Application details" onClose={onClose} wide><div className="details"><div className="detail-hero"><div className="company-logo big">{item.companyName[0]?.toUpperCase()}</div><div className="detail-name"><small>{item.applicationId}</small><h3>{item.jobRole}</h3><p><Building2 size={14}/>{item.companyName}</p></div><Badge status={item.status}/></div><div className="detail-grid"><div><span><CalendarDays size={14}/>Applied date</span><b>{fmt(item.appliedDate)}</b></div><div><span><Clock3 size={14}/>Follow-up date</span><b>{fmt(item.followUpDate)}</b></div><div><span><BriefcaseBusiness size={14}/>Job type</span><b>{item.jobType}</b></div><div><span><CircleDollarSign size={14}/>Expected salary</span><b>{money(item.expectedSalary)}</b></div></div>{item.isOverdue&&<div className="alert overdue"><AlertCircle size={16}/>Follow-up Overdue — status is still Applied.</div>}<div className="history-head"><div><small>APPLICATION ACTIVITY</small><h3>Status history</h3></div><button className="icon-btn" onClick={refresh} title="Refresh"><RefreshCw size={15}/></button></div>{refreshing?<p className="muted">Refreshing…</p>:<div className="timeline">{[...(item.statusHistory||[])].sort((a,b)=>new Date(a.changedAt)-new Date(b.changedAt)).map((h,i,a)=><div className="timeline-item" key={i}><i className={i===a.length-1?'current':''}/><div><b>{h.status}</b><span>{dt(h.changedAt)}</span></div>{i===a.length-1&&<small>Current</small>}</div>)}</div>}{item.notes&&<div className="notes"><span><FileText size={14}/>Notes</span><p>{item.notes}</p></div>}<footer className="detail-foot"><button className="btn danger-ghost" disabled={busy||!['Applied','Rejected','Accepted','Declined'].includes(item.status)} onClick={()=>onDelete(item)}><Trash2 size={15}/>Delete</button><div>{NEXT[item.status].length>0&&<select disabled={busy} defaultValue="" onChange={e=>e.target.value&&onStatus(item,e.target.value)}><option value="">Move to status…</option>{NEXT[item.status].map(s=><option key={s}>{s}</option>)}</select>}<button className="btn primary" onClick={()=>onEdit(item)} disabled={busy}><Pencil size={15}/>Edit</button></div></footer></div></Modal>}
-export default function App(){const[apps,setApps]=useState([]),[stats,setStats]=useState({}),[status,setStatus]=useState('All'),[searchText,setSearchText]=useState(''),[search,setSearch]=useState(''),[loading,setLoading]=useState(true),[error,setError]=useState(''),[modal,setModal]=useState(null),[selected,setSelected]=useState(null),[busy,setBusy]=useState(false),[toast,setToast]=useState('');
-const load=useCallback(async()=>{setLoading(true);setError('');try{const[a,s]=await Promise.all([getApplications({status,search}),getStats()]);setApps(a);setStats(s)}catch(e){setError(e.message)}finally{setLoading(false)}},[status,search]);
-useEffect(()=>{load()},[load]);function notify(s){setToast(s);window\.setTimeout(()=>setToast(''),3000)}
-async function save(payload){setBusy(true);setError('');try{if(modal.mode==='edit')await updateApplication(modal.app._id,payload);else await createApplication(payload);setModal(null);notify(modal.mode==='edit'?'Application updated':'Application added');await load()}catch(e){setError(e.message)}finally{setBusy(false)}}
-async function move(app,s){setBusy(true);try{const updated=await changeStatus(app._id,s);setSelected(updated);notify('Status changed to '+s);await load()}catch(e){notify(e.message)}finally{setBusy(false)}}
-async function remove(app){if(!confirm(\`Delete ${app.applicationId} — ${app.companyName} / ${app.jobRole}?\`))return;setBusy(true);try{await deleteApplication(app._id);setSelected(null);setModal(null);notify('Application deleted');await load()}catch(e){notify(e.message)}finally{setBusy(false)}}
-function edit(app){setSelected(null);setError('');setModal({mode:'edit',app,form:{companyName:app.companyName,jobRole:app.jobRole,jobType:app.jobType,appliedDate:app.appliedDate?.slice(0,10),expectedSalary:app.expectedSalary??'',notes:app.notes||''}})}
-const total=Object.values(stats).reduce((a,b)=>a+b,0);
-return <div className="shell"><aside className="sidebar"><div className="brand"><div><BriefcaseBusiness size={20}/></div>jobtrack<span>.</span></div><small className="side-label">WORKSPACE</small><div className="nav active"><LayoutDashboard size={17}/>Overview</div><div className="side-user"><div>JT</div><section><b>Job seeker</b><small>Personal workspace</small></section></div></aside><main><header className="topbar"><span>Workspace　›　<b>Overview</b></span><span><CalendarDays size={14}/> {new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</span></header><div className="content"><div className="page-title"><div><small>YOUR CAREER, ORGANIZED</small><h1>Application overview<span>.</span></h1><p>Keep every opportunity moving forward.</p></div><button className="btn primary add" onClick={()=>{setError('');setModal({mode:'create'})}}><Plus size={17}/> Add application</button></div><div className="stats">{[['Total applications',total,'Across all stages'],['Applied',stats.Applied||0,'Waiting for response'],['Interview',stats.Interview||0,'Interview process'],['Offer',stats.Offer||0,'Potential offers']].map((x,i)=><div className={'stat '+(i===0?'purple':'')} key={x[0]}><div className="stat-icon"><BriefcaseBusiness size={17}/></div><small>{x[0]}</small><strong>{x[1]}</strong><span>{x[2]}</span></div>)}</div><section className="panel"><header className="panel-title"><div><h2>Your applications</h2><p>Track and manage your job search pipeline.</p></div><span>{apps.length} shown</span></header><div className="toolbar"><div className="search"><Search size={16}/><input value={searchText} onChange={e=>setSearchText(e.target.value)} onKeyDown={e=>e.key==='Enter'&&setSearch(searchText.trim())} placeholder="Search by company…"/>{searchText&&<button onClick={()=>{setSearchText('');setSearch('')}}><X size={14}/></button>}<button className="search-btn" onClick={()=>setSearch(searchText.trim())}>Search</button></div><label className="filter">Status <select value={status} onChange={e=>setStatus(e.target.value)}><option>All</option>{STATUSES.map(s=><option key={s}>{s}</option>)}</select></label></div>{error&&!modal&&<div className="alert"><AlertCircle size={16}/>{error}<button onClick={load}>Retry</button></div>}{loading?<div className="empty"><div className="spinner"/>Loading applications…</div>:!apps.length?<div className="empty"><BriefcaseBusiness size={30}/><h3>{search||status!=='All'?'No matching applications':'Your next opportunity starts here'}</h3><p>{search||status!=='All'?'Try changing the search or filter.':'Add your first application to track your progress.'}</p>{!search&&status==='All'&&<button className="btn primary" onClick={()=>setModal({mode:'create'})}><Plus size={16}/>Add first application</button>}</div>:<div className="table-scroll"><table><thead><tr><th>APPLICATION</th><th>JOB TYPE</th><th>APPLIED DATE</th><th>STATUS</th><th>FOLLOW-UP</th><th/></tr></thead><tbody>{apps.map(a=><tr key={a._id} onClick={()=>setSelected(a)}><td><div className="company-cell"><div className="company-logo">{a.companyName[0]?.toUpperCase()}</div><div><b>{a.companyName}</b><span>{a.jobRole}</span><small>{a.applicationId}</small></div></div></td><td><span className="type">{a.jobType}</span></td><td>{fmt(a.appliedDate)}</td><td><Badge status={a.status}/></td><td>{a.isOverdue?<span className="overdue-badge"><AlertCircle size={13}/>Follow-up Overdue</span>:fmt(a.followUpDate)}</td><td><button className="open-row" onClick={e=>{e.stopPropagation();setSelected(a)}}><ArrowUpRight size={16}/></button></td></tr>)}</tbody></table></div>}<footer className="panel-foot"><span>Showing {apps.length} of {total} applications</span><button onClick={load}><RefreshCw size={13}/> Refresh list</button></footer></section><footer className="page-foot">JOBTRACK. &nbsp; Build momentum, one application at a time.<span>Data stored in MongoDB</span></footer></div></main>{modal&&<Modal title={modal.mode==='edit'?'Edit application':'Add a new application'} onClose={()=>{setModal(null);setError('')}}><Form key={modal.mode+(modal.app?._id||'')} initial={modal.form||null} onClose={()=>{setModal(null);setError('')}} onSave={save} busy={busy} error={error}/></Modal>}{selected&&<Details app={selected} onClose={()=>setSelected(null)} onEdit={edit} onStatus={move} onDelete={remove} busy={busy} />}{toast&&<div className="toast"><CheckCircle2 size={17}/>{toast}</div>}</div>}
+import { useCallback, useEffect, useState } from 'react';
+import {
+  BriefcaseBusiness,
+  Plus,
+  Search,
+  CalendarDays,
+  Clock3,
+  Pencil,
+  Trash2,
+  X,
+  ArrowUpRight,
+  RefreshCw,
+  FileText,
+  Building2,
+  CircleDollarSign,
+  CheckCircle2,
+  AlertCircle,
+  LayoutDashboard
+} from 'lucide-react';
+
+import {
+  getApplications,
+  getStats,
+  getApplication,
+  createApplication,
+  updateApplication,
+  changeStatus,
+  deleteApplication
+} from './api.js';
+
+const STATUSES = [
+  'Applied',
+  'Interview',
+  'Offer',
+  'Rejected',
+  'Accepted',
+  'Declined'
+];
+
+const TYPES = ['Full-time', 'Internship', 'Contract'];
+
+const NEXT = {
+  Applied: ['Interview', 'Rejected'],
+  Interview: ['Offer', 'Rejected'],
+  Offer: ['Accepted', 'Declined'],
+  Rejected: [],
+  Accepted: [],
+  Declined: []
+};
+
+const EMPTY = () => ({
+  companyName: '',
+  jobRole: '',
+  jobType: 'Full-time',
+  appliedDate: new Date().toLocaleDateString('en-CA'),
+  expectedSalary: '',
+  notes: ''
+});
+
+const fmt = (date) =>
+  date
+    ? new Date(date).toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        timeZone: 'UTC'
+      })
+    : '—';
+
+const dt = (date) =>
+  date
+    ? new Date(date).toLocaleString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    : '—';
+
+const money = (amount) =>
+  amount == null || amount === ''
+    ? 'Not specified'
+    : new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        maximumFractionDigits: 0
+      }).format(amount);
+
+function Badge({ status }) {
+  return (
+    <span className={`badge b-${status.toLowerCase()}`}>
+      <i />
+      {status}
+    </span>
+  );
